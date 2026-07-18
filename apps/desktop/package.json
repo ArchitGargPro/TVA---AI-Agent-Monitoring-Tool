@@ -13,6 +13,8 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@mission-control/adapters": "*",
+    "@mission-control/core": "*",
     "@mission-control/shared": "*",
     "@mission-control/ui": "*",
     "@tauri-apps/api": "^2",

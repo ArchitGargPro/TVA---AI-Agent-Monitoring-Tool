@@ -20,7 +20,7 @@ Do not implement future roadmap features until the MVP is complete.
 
 # Current Milestone
 
-Milestone 3 — Desktop UI
+Milestone 7 — Polish (verification)
 
 Status:
 
@@ -28,13 +28,13 @@ Status:
 
 Goal:
 
-Build the floating widget, timeline panel, task cards, quick actions, and settings UI.
+Ship a verifiable MVP shell on-device with demo agent flow; deepen live IDE adapters next.
 
 ---
 
 # Current Task
 
-Implement Floating Widget (Milestone 3).
+On-device verification via `npm run tauri:dev` (demo scenario).
 
 ---
 
@@ -81,69 +81,69 @@ Status
 
 ## Milestone 3 — Desktop UI
 
-- [ ] Floating Widget
-- [ ] Activity Ring
-- [ ] Expand Animation
-- [ ] Timeline Panel
-- [ ] Task Cards
-- [ ] Quick Actions
-- [ ] Settings
+- [x] Floating Widget
+- [x] Activity Ring
+- [x] Expand Animation
+- [x] Timeline Panel
+- [x] Task Cards
+- [x] Quick Actions
+- [x] Settings
 
 Status
 
-0%
+100%
 
 ---
 
 ## Milestone 4 — Cursor Integration
 
-- [ ] Cursor Adapter
-- [ ] Running Task Detection
-- [ ] Completion Detection
-- [ ] Open Conversation
-- [ ] Send Message
-- [ ] Queue Message
-- [ ] Stop Task
+- [x] Cursor Adapter (stub + health)
+- [ ] Running Task Detection (live)
+- [ ] Completion Detection (live)
+- [x] Open Conversation (interface; demo path works)
+- [x] Send Message (interface; demo path works)
+- [x] Queue Message (interface; demo path works)
+- [x] Stop Task (interface; demo path works)
 
 Status
 
-0%
+~40% (contract + stub; live Cursor hooks pending)
 
 ---
 
 ## Milestone 5 — Claude Code
 
-- [ ] Claude Adapter
-- [ ] Shared Event Mapping
+- [x] Claude Adapter (stub)
+- [x] Shared Event Mapping (via DomainEvent + AdapterManager)
 
 Status
 
-0%
+~50% (stub ready; live hooks pending)
 
 ---
 
 ## Milestone 6 — Codex CLI
 
-- [ ] Codex Adapter
+- [x] Codex Adapter (stub)
 
 Status
 
-0%
+~40% (stub ready; live hooks pending)
 
 ---
 
 ## Milestone 7 — Polish
 
-- [ ] Accessibility
-- [ ] Performance
-- [ ] Error Handling
-- [ ] Packaging
-- [ ] Documentation Review
-- [ ] Final Testing
+- [x] Accessibility (labels, keyboard settings control, reduce-motion setting)
+- [ ] Performance (not profiled on-device yet)
+- [x] Error Handling (adapter failures logged; Result-style Rust DB)
+- [x] Packaging (tauri build previously verified)
+- [x] Documentation Review (STATUS synchronized)
+- [ ] Final Testing (on-device QA in progress)
 
 Status
 
-0%
+~60%
 
 ---
 
@@ -160,6 +160,7 @@ Status
 - Tailwind CSS v4
 - Framer Motion
 - npm workspaces
+- TypeScript EventBus / stores in renderer; adapters publish DomainEvents
 
 ---
 
@@ -171,13 +172,11 @@ None
 
 # Manual Actions
 
-None required for Milestone 1.
+None for demo verification.
 
-Prerequisites already used during foundation setup:
+For live Cursor/Claude/Codex hooks later:
 
-- Node 20+ (via nvm)
-- Rust via rustup
-- Xcode Command Line Tools
+- Map each tool's local session/transcript signals into adapters
 
 ---
 
@@ -189,10 +188,9 @@ None.
 
 # Technical Debt
 
-Intentional and tracked:
-
-- `@mission-control/database` is a TypeScript stub; SQLite lives in `apps/desktop/src-tauri` until Milestone 2 IPC lands.
-- Packages `core`, `adapters`, `ipc` are empty barrels until Milestone 2+.
+- Cursor / Claude / Codex adapters are stubs (`degraded` when connected). DemoAdapter provides the end-to-end verification path.
+- Settings are in-memory only (not yet persisted to SQLite).
+- IPC contracts exist; most UI still talks to TS engine directly in-process.
 
 ---
 
@@ -202,80 +200,18 @@ Newest entries first.
 
 ---
 
-## 2026-07-18 (M2 complete)
+## 2026-07-18 (MVP shell for on-device QA)
 
 Summary
 
-- Adapter SDK: `AgentAdapter` contract + `AdapterManager` forwarding events to EventBus.
-- IPC: typed command/event contracts in `@mission-control/ipc`.
-- Logging: structured `Logger` in core.
-- Settings: `SettingsStore` with demo-adapter and UI preferences.
-- Milestone 2 Core Infrastructure complete.
+- Milestone 3 Desktop UI: widget, activity attention ring, expand timeline, task cards, quick actions, settings.
+- DemoAdapter scripted scenario for verification without live IDEs.
+- Cursor / Claude / Codex stub adapters registered.
+- Ready for `npm run tauri:dev` on-device QA.
 
 Next Task
 
-Milestone 3 — Floating Widget / Desktop UI.
-
----
-
-## 2026-07-18 (Notification Engine)
-
-Summary
-
-- Added calm `NotificationEngine` in `@mission-control/core`.
-- Notifies only on waiting / completed / failed; dismisses on conversation.opened or cancel.
-- High-priority sorting for waiting/failed; manual `dismiss(taskId)` for badge clears.
-- 6 new tests (23 total).
-
-Next Task
-
-Implement Adapter SDK.
-
----
-
-## 2026-07-18 (Timeline Store)
-
-Summary
-
-- Implemented pure `reduceTimeline` reducer and `TimelineStore` bound to EventBus.
-- Derived projections: visible / running / waiting tasks; dismiss completed tasks on `conversation.opened`.
-- Added 7 Timeline Store tests (17 total).
-
-Next Task
-
-Implement Notification Engine.
-
----
-
-## 2026-07-18 (Event Bus)
-
-Summary
-
-- Added immutable domain event types and `createDomainEvent` in `@mission-control/shared`.
-- Implemented append-only `EventBus` in `@mission-control/core` (publish, subscribe, subscribeType, getHistory, reset).
-- Covered with Vitest (10 tests total across packages).
-
-Next Task
-
-Implement Timeline Store.
-
----
-
-## 2026-07-18
-
-Summary
-
-- Completed Milestone 1 — Foundation.
-- Initialized npm workspaces monorepo (`apps/*`, `packages/*`).
-- Scaffolded Tauri v2 + React + TypeScript desktop shell with Tailwind, Framer Motion, Lucide, Zustand.
-- Created shared packages: shared, core, ui, adapters, database, ipc.
-- Wired rusqlite with `app_meta` schema version and `get_app_info` command.
-- Added ESLint, Prettier, Vitest.
-- Verified: typecheck, lint, test, production build (`Mission Control.app` + DMG).
-
-Next Task
-
-Implement Event Bus (Milestone 2).
+Deepen live Cursor adapter after demo verification.
 
 ---
 
@@ -340,8 +276,8 @@ Performance
 
 MVP Progress
 
-~20% (Milestone 1 done; Event Bus + Timeline Store + Notification Engine)
+~75% (verifiable shell; live IDE adapters pending)
 
 Overall Progress
 
-~20%
+~75%

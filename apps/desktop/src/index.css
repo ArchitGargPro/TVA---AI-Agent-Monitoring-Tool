@@ -15,7 +15,8 @@ body {
     system-ui,
     -apple-system,
     sans-serif;
-  background: #f4f4f5;
+  background: linear-gradient(165deg, #fafafa 0%, #f4f4f5 45%, #e4e4e7 100%);
   color: #18181b;
   -webkit-font-smoothing: antialiased;
+  overflow: hidden;
 }
