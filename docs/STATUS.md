@@ -34,7 +34,7 @@ Build the event-driven core: Event Bus, Timeline Store, Notification Engine, Ada
 
 # Current Task
 
-Implement Timeline Store (derives timeline state from Event Bus).
+Implement Notification Engine.
 
 ---
 
@@ -66,7 +66,7 @@ Status
 ## Milestone 2 — Core Infrastructure
 
 - [x] Event Bus
-- [ ] Timeline Store
+- [x] Timeline Store
 - [ ] Notification Engine
 - [ ] Adapter SDK
 - [ ] IPC Layer
@@ -75,7 +75,7 @@ Status
 
 Status
 
-~14%
+~28%
 
 ---
 
@@ -202,6 +202,20 @@ Newest entries first.
 
 ---
 
+## 2026-07-18 (Timeline Store)
+
+Summary
+
+- Implemented pure `reduceTimeline` reducer and `TimelineStore` bound to EventBus.
+- Derived projections: visible / running / waiting tasks; dismiss completed tasks on `conversation.opened`.
+- Added 7 Timeline Store tests (17 total).
+
+Next Task
+
+Implement Notification Engine.
+
+---
+
 ## 2026-07-18 (Event Bus)
 
 Summary
@@ -295,8 +309,8 @@ Performance
 
 MVP Progress
 
-~16% (Milestone 1 done; Event Bus in Milestone 2)
+~18% (Milestone 1 done; Event Bus + Timeline Store in Milestone 2)
 
 Overall Progress
 
-~16%
+~18%
