@@ -97,17 +97,17 @@ Status
 
 ## Milestone 4 — Cursor Integration
 
-- [x] Cursor Adapter (stub + health)
-- [ ] Running Task Detection (live)
-- [ ] Completion Detection (live)
-- [x] Open Conversation (interface; demo path works)
-- [x] Send Message (interface; demo path works)
-- [x] Queue Message (interface; demo path works)
-- [x] Stop Task (interface; demo path works)
+- [x] Cursor Adapter (live transcript watcher)
+- [x] Running Task Detection (live)
+- [x] Completion Detection (live)
+- [x] Open Conversation (opens project in Cursor)
+- [ ] Send Message (live Cursor API not available)
+- [ ] Queue Message (live Cursor API not available)
+- [ ] Stop Task (live Cursor API not available)
 
 Status
 
-~40% (contract + stub; live Cursor hooks pending)
+~70%
 
 ---
 
