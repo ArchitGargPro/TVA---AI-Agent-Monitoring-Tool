@@ -1,0 +1,128 @@
+---
+description: Mandatory Self Code Review
+alwaysApply: true
+---
+
+After every implementation, perform a complete Staff Engineer level code review before presenting the result.
+
+Review the implementation against the following checklist.
+
+---
+
+# Architecture
+
+- Is this consistent with ARCHITECTURE.md?
+
+- Does this introduce unnecessary abstractions?
+
+- Can this be simplified?
+
+- Is the ownership of every module obvious?
+
+---
+
+# Readability
+
+- Can variable names improve?
+
+- Can function names improve?
+
+- Can logic become easier to understand?
+
+- Is the code self-documenting?
+
+---
+
+# Duplication
+
+- Is similar logic already present elsewhere?
+
+- Can existing code be reused?
+
+- Did this create another helper that already exists?
+
+---
+
+# Performance
+
+- Any unnecessary allocations?
+
+- Any unnecessary renders?
+
+- Any unnecessary cloning?
+
+- Any unnecessary async work?
+
+- Any unnecessary database calls?
+
+- Any unnecessary event emissions?
+
+---
+
+# Dependencies
+
+- Did we add a dependency?
+
+- Was it actually necessary?
+
+- Could existing platform APIs solve the problem?
+
+---
+
+# Error Handling
+
+- Are failures handled?
+
+- Can the application recover?
+
+- Are errors useful?
+
+---
+
+# Types
+
+- Any use of any?
+
+- Any ignored type errors?
+
+- Any weak typing?
+
+---
+
+# UX
+
+- Does this interaction feel polished?
+
+- Are animations smooth?
+
+- Are loading states correct?
+
+- Are edge cases handled?
+
+---
+
+# Documentation
+
+Did implementation require updates to:
+
+STATUS.md
+
+PRODUCT.md
+
+ARCHITECTURE.md
+
+STANDARDS.md
+
+---
+
+# Final Question
+
+If this were submitted by a Senior Engineer in a top-tier company:
+
+Would I approve this pull request without requesting changes?
+
+If the answer is no,
+
+improve the implementation before considering the task complete.
+
+Never skip this review.

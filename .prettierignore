@@ -1,0 +1,8 @@
+dist
+node_modules
+coverage
+target
+**/src-tauri/gen
+**/src-tauri/target
+*.tsbuildinfo
+package-lock.json
