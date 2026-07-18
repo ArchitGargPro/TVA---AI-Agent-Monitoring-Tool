@@ -32,13 +32,26 @@ export class CursorAdapter implements AgentAdapter {
   private readonly handlers = new Set<AdapterEventHandler>();
   private readonly known = new Map<string, CursorAgentSnapshot>();
   private unlisten: UnlistenFn | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   async connect(): Promise<void> {
     this.connected = true;
+
+    try {
+      this.unlisten = await listen<CursorAgentSnapshot[]>("cursor-agents", (event) => {
+        this.applySnapshots(event.payload);
+      });
+    } catch {
+      // Fall back to polling if event listen is unavailable.
+    }
+
     await this.refresh();
-    this.unlisten = await listen<CursorAgentSnapshot[]>("cursor://agents", (event) => {
-      this.applySnapshots(event.payload);
-    });
+
+    this.pollTimer = setInterval(() => {
+      void this.refresh().catch(() => {
+        // Ignore transient scan errors while polling.
+      });
+    }, 2000);
   }
 
   async disconnect(): Promise<void> {
@@ -46,6 +59,10 @@ export class CursorAdapter implements AgentAdapter {
     if (this.unlisten) {
       this.unlisten();
       this.unlisten = null;
+    }
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
     }
   }
 
@@ -67,11 +84,11 @@ export class CursorAdapter implements AgentAdapter {
   }
 
   async sendMessage(): Promise<void> {
-    throw new Error("Send message into a live Cursor chat is not available yet");
+    throw new Error("Send into live Cursor chat is not available yet");
   }
 
   async queueMessage(): Promise<void> {
-    throw new Error("Queue message into a live Cursor chat is not available yet");
+    throw new Error("Queue into live Cursor chat is not available yet");
   }
 
   async stopTask(): Promise<void> {
@@ -79,14 +96,15 @@ export class CursorAdapter implements AgentAdapter {
   }
 
   async openConversation(taskId: string): Promise<void> {
-    const snapshot = this.known.get(taskId);
-    if (!snapshot) {
-      throw new Error(`Unknown Cursor task: ${taskId}`);
+    if (!this.known.has(taskId)) {
+      await this.refresh();
     }
 
-    if (snapshot.projectPath) {
-      await invoke("open_cursor_project", { path: snapshot.projectPath });
-    }
+    const snapshot = this.known.get(taskId);
+    await invoke("open_in_app", {
+      app: "Cursor",
+      path: snapshot?.projectPath ?? null,
+    });
 
     this.emit(
       createDomainEvent("conversation.opened", {
@@ -136,7 +154,12 @@ export class CursorAdapter implements AgentAdapter {
         continue;
       }
 
-      if (agent.status !== previous.status || agent.activity !== previous.activity) {
+      if (
+        agent.status !== previous.status ||
+        agent.activity !== previous.activity ||
+        agent.title !== previous.title ||
+        agent.updatedAt !== previous.updatedAt
+      ) {
         this.emitStatus(agent);
       }
     }
@@ -163,12 +186,21 @@ export class CursorAdapter implements AgentAdapter {
           taskId: agent.taskId,
           source: "cursor",
           reason: agent.activity ?? "Waiting for input",
+          title: agent.title,
         }),
       );
       return;
     }
 
     if (agent.status === "completed") {
+      this.emit(
+        createDomainEvent("task.updated", {
+          taskId: agent.taskId,
+          source: "cursor",
+          activity: agent.activity ?? "Done",
+          title: agent.title,
+        }),
+      );
       this.emit(
         createDomainEvent("task.completed", {
           taskId: agent.taskId,
@@ -183,6 +215,7 @@ export class CursorAdapter implements AgentAdapter {
         taskId: agent.taskId,
         source: "cursor",
         activity: agent.activity ?? `Active in ${agent.projectName}`,
+        title: agent.title,
       }),
     );
   }

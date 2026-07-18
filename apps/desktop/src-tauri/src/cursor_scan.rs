@@ -113,8 +113,10 @@ fn parse_transcript(
             if role == "assistant" {
                 last_activity = extract_assistant_activity(&value).or(last_activity);
             }
-            if title.is_none() && role == "user" {
-                title = extract_user_title(&value);
+            if role == "user" {
+                if let Some(next_title) = extract_user_title(&value) {
+                    title = Some(next_title);
+                }
             }
         }
     }
@@ -145,9 +147,9 @@ fn parse_transcript(
         task_id: format!("cursor:{session_id}"),
         title: title
             .unwrap_or_else(|| format!("Cursor agent · {project_name}"))
-            .chars()
-            .take(80)
-            .collect(),
+        .chars()
+        .take(48)
+        .collect(),
         project_name,
         project_path,
         transcript_path: path.display().to_string(),
@@ -158,9 +160,7 @@ fn parse_transcript(
 }
 
 fn extract_user_title(value: &serde_json::Value) -> Option<String> {
-    let text = value
-        .pointer("/message/content/0/text")?
-        .as_str()?;
+    let text = value.pointer("/message/content/0/text")?.as_str()?;
     let cleaned = text
         .replace("<user_query>", " ")
         .replace("</user_query>", " ")
@@ -172,10 +172,10 @@ fn extract_user_title(value: &serde_json::Value) -> Option<String> {
                 && !line.starts_with('<')
                 && !line.starts_with("This is an image")
                 && !line.starts_with("[Image]")
+                && !line.starts_with("You are the")
         })
-        .take(2)
-        .collect::<Vec<_>>()
-        .join(" ");
+        .next()?
+        .to_string();
     if cleaned.is_empty() {
         None
     } else {

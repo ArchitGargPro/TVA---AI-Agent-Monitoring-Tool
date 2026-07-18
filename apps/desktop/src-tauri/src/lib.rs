@@ -118,18 +118,20 @@ fn scan_cursor_agents() -> Result<Vec<cursor_scan::CursorAgentSnapshot>, AppErro
 }
 
 #[tauri::command]
-fn open_cursor_project(path: String) -> Result<(), AppError> {
-    let target = PathBuf::from(&path);
-    if !target.exists() {
-        return Err(AppError::Message(format!("Project path not found: {path}")));
+fn open_in_app(app: String, path: Option<String>) -> Result<(), AppError> {
+    let mut command = std::process::Command::new("open");
+    command.arg("-a").arg(&app);
+
+    if let Some(path) = path {
+        let target = PathBuf::from(&path);
+        if target.exists() {
+            command.arg(&target);
+        }
     }
 
-    std::process::Command::new("open")
-        .arg("-a")
-        .arg("Cursor")
-        .arg(&target)
+    command
         .spawn()
-        .map_err(|error| AppError::Message(format!("Failed to open Cursor: {error}")))?;
+        .map_err(|error| AppError::Message(format!("Failed to open {app}: {error}")))?;
 
     Ok(())
 }
@@ -144,10 +146,11 @@ fn start_cursor_watch(app: AppHandle) {
                         .iter()
                         .map(|agent| {
                             format!(
-                                "{}:{}:{}:{}",
+                                "{}:{}:{}:{}:{}",
                                 agent.task_id,
                                 agent.status,
                                 agent.updated_at,
+                                agent.title,
                                 agent.activity.clone().unwrap_or_default()
                             )
                         })
@@ -156,7 +159,7 @@ fn start_cursor_watch(app: AppHandle) {
 
                     if fingerprint != last_fingerprint {
                         last_fingerprint = fingerprint;
-                        let _ = app.emit("cursor://agents", &agents);
+                        let _ = app.emit("cursor-agents", &agents);
                     }
                 }
                 Err(error) => {
@@ -186,7 +189,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_app_info,
             scan_cursor_agents,
-            open_cursor_project
+            open_in_app
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

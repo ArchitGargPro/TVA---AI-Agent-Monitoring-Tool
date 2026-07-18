@@ -30,6 +30,8 @@ export interface TaskStartedEvent extends DomainEventBase {
 export interface TaskUpdatedEvent extends DomainEventBase {
   readonly type: "task.updated";
   readonly activity: string;
+  /** Optional title refresh when the conversation name changes. */
+  readonly title?: string;
 }
 
 export interface TaskCompletedEvent extends DomainEventBase {
@@ -48,6 +50,7 @@ export interface TaskCancelledEvent extends DomainEventBase {
 export interface TaskWaitingEvent extends DomainEventBase {
   readonly type: "task.waiting";
   readonly reason: string;
+  readonly title?: string;
 }
 
 export interface MessageQueuedEvent extends DomainEventBase {

@@ -9,8 +9,11 @@ import {
   AdapterManager,
   ClaudeAdapter,
   CodexAdapter,
+  ContinueAdapter,
   CursorAdapter,
   DemoAdapter,
+  GeminiAdapter,
+  WindsurfAdapter,
 } from "@mission-control/adapters";
 
 export interface MissionControlEngine {
@@ -32,13 +35,14 @@ export function createMissionControlEngine(): MissionControlEngine {
 
   const demo = new DemoAdapter();
   const cursor = new CursorAdapter();
-  const claude = new ClaudeAdapter();
-  const codex = new CodexAdapter();
 
-  adapters.register(demo);
   adapters.register(cursor);
-  adapters.register(claude);
-  adapters.register(codex);
+  adapters.register(new ClaudeAdapter());
+  adapters.register(new CodexAdapter());
+  adapters.register(new WindsurfAdapter());
+  adapters.register(new ContinueAdapter());
+  adapters.register(new GeminiAdapter());
+  adapters.register(demo);
 
   void adapters
     .connectAll()

@@ -70,15 +70,24 @@ export function reduceTimeline(state: TimelineState, event: DomainEvent): Timeli
     }
     case "task.updated": {
       const existing = tasks.get(event.taskId);
-      if (existing && (existing.status === "running" || existing.status === "waiting")) {
-        tasks = upsertTask(tasks, {
-          ...existing,
-          status: "running",
-          activity: event.activity,
-          waitingReason: null,
-          updatedAt: event.timestamp,
-        });
+      if (!existing) {
+        break;
       }
+      const nextStatus =
+        existing.status === "completed" ||
+        existing.status === "failed" ||
+        existing.status === "cancelled"
+          ? existing.status
+          : "running";
+      tasks = upsertTask(tasks, {
+        ...existing,
+        status: nextStatus,
+        title: event.title ?? existing.title,
+        activity: event.activity,
+        waitingReason: nextStatus === "running" ? null : existing.waitingReason,
+        updatedAt: event.timestamp,
+        dismissed: false,
+      });
       break;
     }
     case "task.waiting": {
@@ -87,6 +96,7 @@ export function reduceTimeline(state: TimelineState, event: DomainEvent): Timeli
         tasks = upsertTask(tasks, {
           ...existing,
           status: "waiting",
+          title: event.title ?? existing.title,
           waitingReason: event.reason,
           updatedAt: event.timestamp,
         });
