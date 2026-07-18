@@ -1,5 +1,9 @@
-/**
- * Adapter implementations for AI coding tools.
- * Populated in Milestones 4–6 (Cursor, Claude Code, Codex).
- */
-export {};
+export type {
+  AgentAdapter,
+  AdapterEventHandler,
+  AdapterHealth,
+  AdapterHealthStatus,
+  AdapterUnsubscribe,
+  RunningTaskSnapshot,
+} from "./types";
+export { AdapterManager } from "./adapterManager";

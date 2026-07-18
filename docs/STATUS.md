@@ -20,7 +20,7 @@ Do not implement future roadmap features until the MVP is complete.
 
 # Current Milestone
 
-Milestone 2 — Core Infrastructure
+Milestone 3 — Desktop UI
 
 Status:
 
@@ -28,13 +28,13 @@ Status:
 
 Goal:
 
-Build the event-driven core: Event Bus, Timeline Store, Notification Engine, Adapter SDK, IPC, Logging, and Settings Store.
+Build the floating widget, timeline panel, task cards, quick actions, and settings UI.
 
 ---
 
 # Current Task
 
-Implement Adapter SDK.
+Implement Floating Widget (Milestone 3).
 
 ---
 
@@ -68,14 +68,14 @@ Status
 - [x] Event Bus
 - [x] Timeline Store
 - [x] Notification Engine
-- [ ] Adapter SDK
-- [ ] IPC Layer
-- [ ] Logging
-- [ ] Settings Store
+- [x] Adapter SDK
+- [x] IPC Layer
+- [x] Logging
+- [x] Settings Store
 
 Status
 
-~43%
+100%
 
 ---
 
@@ -199,6 +199,22 @@ Intentional and tracked:
 # Session Notes
 
 Newest entries first.
+
+---
+
+## 2026-07-18 (M2 complete)
+
+Summary
+
+- Adapter SDK: `AgentAdapter` contract + `AdapterManager` forwarding events to EventBus.
+- IPC: typed command/event contracts in `@mission-control/ipc`.
+- Logging: structured `Logger` in core.
+- Settings: `SettingsStore` with demo-adapter and UI preferences.
+- Milestone 2 Core Infrastructure complete.
+
+Next Task
+
+Milestone 3 — Floating Widget / Desktop UI.
 
 ---
 

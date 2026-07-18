@@ -1,5 +1,15 @@
-/**
- * Frontend ↔ Tauri IPC contracts and helpers.
- * Populated in Milestone 2.
- */
-export {};
+export { IpcCommands, IpcEvents } from "./contracts";
+export type {
+  AdapterHealthEvent,
+  AppInfoDto,
+  AppSettings,
+  DomainEvent,
+  IpcCommand,
+  NotificationDto,
+  RunningTaskSnapshot,
+  TaskIdRequest,
+  TaskMessageRequest,
+  TimelineSnapshotDto,
+  TimelineTaskDto,
+  UpdateSettingsRequest,
+} from "./contracts";

@@ -26,3 +26,14 @@ export type {
   NotificationPriority,
   NotificationState,
 } from "./notificationEngine";
+
+export { Logger, logger } from "./logger";
+export type { LogLevel, LogRecord, LogSink } from "./logger";
+
+export { DEFAULT_SETTINGS, SettingsStore } from "./settingsStore";
+export type {
+  AppSettings,
+  SettingsListener,
+  SettingsUnsubscribe,
+  ThemePreference,
+} from "./settingsStore";

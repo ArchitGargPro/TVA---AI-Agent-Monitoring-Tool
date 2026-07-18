@@ -11,6 +11,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@mission-control/adapters": "*",
+    "@mission-control/core": "*",
+    "@mission-control/shared": "*"
+  },
   "devDependencies": {
     "typescript": "^5.7.2"
   }
