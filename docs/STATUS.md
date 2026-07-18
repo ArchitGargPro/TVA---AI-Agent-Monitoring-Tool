@@ -34,7 +34,7 @@ Build the event-driven core: Event Bus, Timeline Store, Notification Engine, Ada
 
 # Current Task
 
-Implement Notification Engine.
+Implement Adapter SDK.
 
 ---
 
@@ -67,7 +67,7 @@ Status
 
 - [x] Event Bus
 - [x] Timeline Store
-- [ ] Notification Engine
+- [x] Notification Engine
 - [ ] Adapter SDK
 - [ ] IPC Layer
 - [ ] Logging
@@ -75,7 +75,7 @@ Status
 
 Status
 
-~28%
+~43%
 
 ---
 
@@ -202,6 +202,21 @@ Newest entries first.
 
 ---
 
+## 2026-07-18 (Notification Engine)
+
+Summary
+
+- Added calm `NotificationEngine` in `@mission-control/core`.
+- Notifies only on waiting / completed / failed; dismisses on conversation.opened or cancel.
+- High-priority sorting for waiting/failed; manual `dismiss(taskId)` for badge clears.
+- 6 new tests (23 total).
+
+Next Task
+
+Implement Adapter SDK.
+
+---
+
 ## 2026-07-18 (Timeline Store)
 
 Summary
@@ -309,8 +324,8 @@ Performance
 
 MVP Progress
 
-~18% (Milestone 1 done; Event Bus + Timeline Store in Milestone 2)
+~20% (Milestone 1 done; Event Bus + Timeline Store + Notification Engine)
 
 Overall Progress
 
-~18%
+~20%
