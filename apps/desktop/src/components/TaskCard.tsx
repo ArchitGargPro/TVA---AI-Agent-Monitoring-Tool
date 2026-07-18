@@ -17,49 +17,52 @@ export function TaskCard({ task, onSend, onQueue, onStop, onOpen }: TaskCardProp
     task.status === "running" || task.status === "waiting",
   );
   const [draft, setDraft] = useState("");
+  const isLiveCursor = task.taskId.startsWith("cursor:");
 
   const statusColor =
     task.status === "waiting"
-      ? "text-amber-700"
+      ? "text-amber-600"
       : task.status === "failed"
-        ? "text-red-700"
+        ? "text-red-500"
         : task.status === "completed"
-          ? "text-emerald-700"
-          : "text-zinc-600";
+          ? "text-emerald-600"
+          : "text-[var(--mc-muted)]";
 
   return (
-    <article className="rounded-xl border border-zinc-200/80 bg-white/90 p-3 shadow-sm backdrop-blur">
+    <article className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-surface)] p-3 shadow-sm backdrop-blur">
       <header className="mb-2 flex items-start justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-zinc-900">{task.title}</h3>
+          <h3 className="text-sm font-semibold text-[var(--mc-text)]">{task.title}</h3>
           <p className={`text-xs capitalize ${statusColor}`}>
             {task.status}
             {task.waitingReason ? ` · ${task.waitingReason}` : null}
             {task.error ? ` · ${task.error}` : null}
           </p>
         </div>
-        <div className="text-right text-xs text-zinc-500">
+        <div className="text-right text-xs text-[var(--mc-muted)]">
           <div>{task.source}</div>
           <div className="font-mono">{elapsed}</div>
         </div>
       </header>
 
-      {task.activity ? <p className="mb-2 text-xs text-zinc-600">{task.activity}</p> : null}
+      {task.activity ? (
+        <p className="mb-2 text-xs text-[var(--mc-muted)]">{task.activity}</p>
+      ) : null}
 
-      {(task.status === "running" || task.status === "waiting") && (
+      {!isLiveCursor && (task.status === "running" || task.status === "waiting") ? (
         <div className="mb-2 flex gap-2">
           <input
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Send a message…"
-            className="min-w-0 flex-1 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs outline-none focus:border-zinc-400"
+            className="min-w-0 flex-1 rounded-md border border-[var(--mc-border)] bg-transparent px-2 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-focus)]"
             aria-label={`Message for ${task.title}`}
           />
         </div>
-      )}
+      ) : null}
 
       <div className="flex flex-wrap gap-1.5">
-        {(task.status === "running" || task.status === "waiting") && (
+        {!isLiveCursor && (task.status === "running" || task.status === "waiting") ? (
           <>
             <Button
               className="!bg-zinc-800 !px-2 !py-1 !text-xs"
@@ -92,9 +95,9 @@ export function TaskCard({ task, onSend, onQueue, onStop, onOpen }: TaskCardProp
               Stop
             </Button>
           </>
-        )}
+        ) : null}
         <Button className="!bg-zinc-700 !px-2 !py-1 !text-xs" onClick={() => onOpen(task.taskId)}>
-          Open
+          Open in Cursor
         </Button>
       </div>
     </article>

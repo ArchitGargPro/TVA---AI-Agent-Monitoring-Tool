@@ -1,9 +1,12 @@
+mod cursor_scan;
+
 use rusqlite::Connection;
 use serde::Serialize;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::{AppHandle, Manager, State};
+use std::time::Duration;
+use tauri::{AppHandle, Emitter, Manager, State};
 
 const APP_NAME: &str = "Mission Control";
 const SCHEMA_VERSION: i64 = 1;
@@ -109,6 +112,63 @@ fn get_app_info(state: State<'_, DbState>) -> Result<AppInfo, AppError> {
     })
 }
 
+#[tauri::command]
+fn scan_cursor_agents() -> Result<Vec<cursor_scan::CursorAgentSnapshot>, AppError> {
+    cursor_scan::scan_cursor_agents().map_err(AppError::Message)
+}
+
+#[tauri::command]
+fn open_cursor_project(path: String) -> Result<(), AppError> {
+    let target = PathBuf::from(&path);
+    if !target.exists() {
+        return Err(AppError::Message(format!("Project path not found: {path}")));
+    }
+
+    std::process::Command::new("open")
+        .arg("-a")
+        .arg("Cursor")
+        .arg(&target)
+        .spawn()
+        .map_err(|error| AppError::Message(format!("Failed to open Cursor: {error}")))?;
+
+    Ok(())
+}
+
+fn start_cursor_watch(app: AppHandle) {
+    std::thread::spawn(move || {
+        let mut last_fingerprint = String::new();
+        loop {
+            match cursor_scan::scan_cursor_agents() {
+                Ok(agents) => {
+                    let fingerprint = agents
+                        .iter()
+                        .map(|agent| {
+                            format!(
+                                "{}:{}:{}:{}",
+                                agent.task_id,
+                                agent.status,
+                                agent.updated_at,
+                                agent.activity.clone().unwrap_or_default()
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("|");
+
+                    if fingerprint != last_fingerprint {
+                        last_fingerprint = fingerprint;
+                        let _ = app.emit("cursor://agents", &agents);
+                    }
+                }
+                Err(error) => {
+                    eprintln!("cursor scan failed: {error}");
+                }
+            }
+
+            std::thread::sleep(Duration::from_secs(2));
+        }
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -120,9 +180,14 @@ pub fn run() {
                 connection: Mutex::new(connection),
                 path,
             });
+            start_cursor_watch(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_app_info])
+        .invoke_handler(tauri::generate_handler![
+            get_app_info,
+            scan_cursor_agents,
+            open_cursor_project
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

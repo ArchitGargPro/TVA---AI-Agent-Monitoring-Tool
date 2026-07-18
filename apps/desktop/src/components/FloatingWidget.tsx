@@ -19,7 +19,7 @@ export function FloatingWidget({ expanded, onToggle, onOpenSettings }: FloatingW
   return (
     <motion.div
       layout
-      className="flex w-full items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white/90 px-3 py-2.5 shadow-md backdrop-blur"
+      className="flex w-full items-center gap-3 rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-surface)] px-3 py-2.5 shadow-md backdrop-blur"
     >
       <button
         type="button"
@@ -45,15 +45,17 @@ export function FloatingWidget({ expanded, onToggle, onOpenSettings }: FloatingW
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold text-zinc-900">{APP_NAME}</span>
-          <span className="block truncate text-xs text-zinc-500">
+          <span className="block truncate text-sm font-semibold text-[var(--mc-text)]">
+            {APP_NAME}
+          </span>
+          <span className="block truncate text-xs text-[var(--mc-muted)]">
             {waiting.length > 0
               ? `${waiting.length} waiting`
               : active > 0
                 ? `${active} running`
                 : count > 0
                   ? `${count} notification${count === 1 ? "" : "s"}`
-                  : "Idle"}
+                  : "Watching Cursor"}
           </span>
         </span>
 
@@ -67,7 +69,7 @@ export function FloatingWidget({ expanded, onToggle, onOpenSettings }: FloatingW
 
       <button
         type="button"
-        className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+        className="rounded-lg p-1.5 text-[var(--mc-muted)] hover:bg-zinc-500/10 hover:text-[var(--mc-text)]"
         aria-label="Open settings"
         onClick={onOpenSettings}
       >

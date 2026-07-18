@@ -1,6 +1,27 @@
 @import "tailwindcss";
 @source "../../../packages/ui/src";
 
+:root,
+[data-theme="light"] {
+  --mc-bg: #f4f4f5;
+  --mc-bg-accent: #e4e4e7;
+  --mc-surface: rgba(255, 255, 255, 0.92);
+  --mc-border: rgba(228, 228, 231, 0.9);
+  --mc-text: #18181b;
+  --mc-muted: #71717a;
+  --mc-focus: #3b82f6;
+}
+
+[data-theme="dark"] {
+  --mc-bg: #09090b;
+  --mc-bg-accent: #18181b;
+  --mc-surface: rgba(24, 24, 27, 0.94);
+  --mc-border: rgba(63, 63, 70, 0.95);
+  --mc-text: #fafafa;
+  --mc-muted: #a1a1aa;
+  --mc-focus: #60a5fa;
+}
+
 html,
 body,
 #root {
@@ -15,8 +36,8 @@ body {
     system-ui,
     -apple-system,
     sans-serif;
-  background: linear-gradient(165deg, #fafafa 0%, #f4f4f5 45%, #e4e4e7 100%);
-  color: #18181b;
+  background: linear-gradient(165deg, var(--mc-bg) 0%, var(--mc-bg-accent) 100%);
+  color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }

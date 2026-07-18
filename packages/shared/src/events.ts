@@ -95,9 +95,16 @@ export function createDomainEvent<T extends DomainEventType>(
   options?: { id?: string; timestamp?: number },
 ): DomainEventOfType<T> {
   return {
-    id: options?.id ?? crypto.randomUUID(),
+    id: options?.id ?? createEventId(),
     timestamp: options?.timestamp ?? Date.now(),
     type,
     ...payload,
   } as DomainEventOfType<T>;
+}
+
+function createEventId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `evt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }

@@ -11,7 +11,7 @@ export interface AppSettings {
 export const DEFAULT_SETTINGS: AppSettings = {
   launchAtLogin: false,
   showInMenuBar: true,
-  enableDemoAdapter: true,
+  enableDemoAdapter: false,
   theme: "system",
   reduceMotion: false,
 };

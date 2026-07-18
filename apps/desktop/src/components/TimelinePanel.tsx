@@ -1,41 +1,59 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+import type { DemoAdapter } from "@mission-control/adapters";
 import { TaskCard } from "./TaskCard";
 import { useTimelineTasks } from "../hooks/useTimelineTasks";
 import { useMissionControl } from "../engine/MissionControlContext";
-import type { DemoAdapter } from "@mission-control/adapters";
+import { useSettings } from "../hooks/useSettings";
 
 export function TimelinePanel() {
   const { visible } = useTimelineTasks();
   const { adapters } = useMissionControl();
+  const { settings } = useSettings();
+  const [error, setError] = useState<string | null>(null);
 
   async function withAdapter(
     taskId: string,
     action: (adapter: NonNullable<ReturnType<typeof adapters.get>>) => Promise<void>,
   ) {
-    const demo = adapters.get("demo");
+    setError(null);
     const cursor = adapters.get("cursor");
-    const target =
-      taskId.startsWith("demo") && demo ? demo : (demo ?? cursor ?? adapters.list()[0]);
+    const demo = adapters.get("demo");
+    const target = taskId.startsWith("cursor:")
+      ? cursor
+      : taskId.startsWith("demo")
+        ? demo
+        : (cursor ?? demo ?? adapters.list()[0]);
+
     if (!target) {
+      setError("No adapter available for this task");
       return;
     }
-    await action(target);
+
+    try {
+      await action(target);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   return (
-    <section
-      className="flex max-h-[420px] flex-col gap-2 overflow-y-auto pr-1"
-      aria-label="Timeline"
-    >
+    <section className="flex flex-col gap-2" aria-label="Timeline">
+      {error ? (
+        <p className="rounded-md bg-red-500/10 px-2 py-1.5 text-xs text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
+
       <AnimatePresence initial={false}>
         {visible.length === 0 ? (
           <motion.p
             key="empty"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="px-1 py-6 text-center text-sm text-zinc-500"
+            className="px-1 py-6 text-center text-sm text-[var(--mc-muted)]"
           >
-            No active tasks. Run the demo to verify the flow.
+            Watching live Cursor agents. Start or continue a Cursor chat to see it here.
           </motion.p>
         ) : (
           visible.map((task) => (
@@ -67,26 +85,43 @@ export function TimelinePanel() {
         )}
       </AnimatePresence>
 
-      <DemoControls />
+      <div className="flex gap-2 border-t border-[var(--mc-border)] pt-2">
+        <button
+          type="button"
+          className="flex-1 rounded-md bg-zinc-900 px-3 py-2 text-xs font-medium text-white hover:opacity-90"
+          onClick={() => {
+            setError(null);
+            const cursor = adapters.get("cursor") as { refresh?: () => Promise<void> } | undefined;
+            void cursor?.refresh?.().catch((err: unknown) => {
+              setError(err instanceof Error ? err.message : String(err));
+            });
+          }}
+        >
+          Refresh Cursor
+        </button>
+      </div>
+
+      {settings.enableDemoAdapter ? <DemoControls onError={setError} /> : null}
     </section>
   );
 }
 
-function DemoControls() {
+function DemoControls({ onError }: { onError: (message: string | null) => void }) {
   const { adapters, demo } = useMissionControl();
   const demoAdapter = (adapters.get("demo") as DemoAdapter | undefined) ?? demo;
 
   return (
-    <div className="sticky bottom-0 flex gap-2 border-t border-zinc-200/70 bg-[#f4f4f5]/95 py-2 backdrop-blur">
-      <button
-        type="button"
-        className="flex-1 rounded-md bg-zinc-900 px-3 py-2 text-xs font-medium text-white hover:opacity-90"
-        onClick={() => {
-          void demoAdapter.runScenario();
-        }}
-      >
-        Run demo scenario
-      </button>
-    </div>
+    <button
+      type="button"
+      className="w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-surface)] px-3 py-2 text-xs font-medium text-[var(--mc-text)] hover:opacity-90"
+      onClick={() => {
+        onError(null);
+        void demoAdapter.runScenario().catch((err: unknown) => {
+          onError(err instanceof Error ? err.message : String(err));
+        });
+      }}
+    >
+      Run demo scenario
+    </button>
   );
 }
