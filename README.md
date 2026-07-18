@@ -218,15 +218,71 @@ See `docs/STATUS.md` for the current implementation status and next milestones.
 ## Development
 
 ```bash
+nvm use          # Node 20 via .nvmrc
 npm install
-npm run tauri:dev      # run desktop shell
-npm run tauri:build    # production build
+npm run tauri:dev      # run MinuteControl + Miss Minutes (dev)
+npm run tauri:build    # production .app / .dmg
 npm run typecheck
 npm run lint
 npm run test
 ```
 
 Requires Node 20+, Rust (via rustup), and Xcode Command Line Tools on macOS.
+
+---
+
+## Launch (if closed)
+
+**While developing**
+
+```bash
+cd /path/to/tva
+nvm use
+npm run tauri:dev
+```
+
+**After a production build**
+
+1. Run `npm run tauri:build`
+2. Open the app from:
+   - `apps/desktop/src-tauri/target/release/bundle/macos/MinuteControl.app`
+   - or the `.dmg` in `apps/desktop/src-tauri/target/release/bundle/dmg/`
+3. Drag **MinuteControl.app** into `/Applications`, then launch from Spotlight / Dock / Launchpad
+
+Miss Minutes stays always-on-top. Drag her to move; hover or click to expand agent bubbles. She glows on updates until you hover or click (badge clears).
+
+---
+
+## Share / install for others
+
+1. On your Mac: `npm run tauri:build`
+2. Share either:
+   - `Mission Control.app` (zip it), or
+   - the `.dmg` installer from `target/release/bundle/dmg/`
+3. On their Mac: open the app/dmg. First launch may need **System Settings → Privacy & Security → Open Anyway** (unsigned local builds are blocked by Gatekeeper until notarized).
+
+Notarized Apple Developer distribution is a later release step — not required for private sharing.
+
+---
+
+## Local data & “console” / stats
+
+Everything is **local-first**. Nothing is sent to a remote dashboard.
+
+| What                                   | Where                                                                         |
+| -------------------------------------- | ----------------------------------------------------------------------------- |
+| SQLite DB (settings, dismissed agents) | `~/Library/Application Support/com.minutecontrol.desktop/mission-control.db` |
+| Dev logs                               | Terminal where you ran `npm run tauri:dev`                                    |
+| WebView console                        | That same terminal (and Safari Web Inspector if attached)                     |
+| Cursor agent source                    | `~/.cursor/projects/*/agent-transcripts/` (read-only scan)                    |
+
+On startup the app logs the database path:
+
+```text
+[mission-control] local database: /Users/…/mission-control.db
+```
+
+There is no hosted analytics console in MVP. Inspect the SQLite file with any SQLite browser if you want raw stats.
 
 ---
 

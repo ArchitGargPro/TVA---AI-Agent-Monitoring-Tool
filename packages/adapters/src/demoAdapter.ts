@@ -153,6 +153,15 @@ export class DemoAdapter implements AgentAdapter {
     );
   }
 
+  async acknowledgeTask(taskId: string): Promise<void> {
+    this.emit(
+      createDomainEvent("conversation.opened", {
+        taskId,
+        source: this.source,
+      }),
+    );
+  }
+
   async getRunningTasks(): Promise<readonly RunningTaskSnapshot[]> {
     if (!this.running) {
       return [];

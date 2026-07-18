@@ -658,3 +658,35 @@ Avoid premature abstraction across packages before the IPC layer ships.
 Status
 
 Accepted.
+
+---
+
+## ADR-005
+
+Decision
+
+Keep the Mission Control engine (EventBus, TimelineStore, adapters) as a process-lifetime singleton in the React renderer for MVP.
+
+Reason
+
+React StrictMode remounts dispose short-lived engine instances and drop Cursor event subscriptions. A singleton preserves live watchers across remounts without moving the full event core into Rust yet.
+
+Status
+
+Accepted.
+
+---
+
+## ADR-006
+
+Decision
+
+Use elevated NSWindow level (`CGShieldingWindowLevel - 1`) plus collection behavior (`visibleOnAllWorkspaces`, `FullScreenAuxiliary`, `CanJoinAllSpaces`) so Miss Minutes can appear over fullscreen Spaces. Elevation must run on the main thread only (AppKit); the cursor watch loop re-asserts via `run_on_main_thread`. Keep a Dock icon (Regular activation policy) so **MinuteControl** can be relaunched after quit. The fidget window is a fixed large transparent canvas (~480×360) so agent bubbles are not cropped; drag uses `startDragging` after a move threshold. Launching Miss Minutes twice is a no-op.
+
+Reason
+
+Fullscreen overlays need panel-like window levels. Hiding the Dock icon (Accessory / LSUIElement) made relaunch confusing for MVP users.
+
+Status
+
+Accepted.

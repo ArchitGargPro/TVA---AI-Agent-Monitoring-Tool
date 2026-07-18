@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Mission Control — desktop companion for AI coding agents",
+  "description": "MinuteControl — floating Miss Minutes companion for AI coding agents",
   "workspaces": [
     "apps/*",
     "packages/*"

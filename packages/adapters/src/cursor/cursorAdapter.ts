@@ -31,6 +31,8 @@ export class CursorAdapter implements AgentAdapter {
   private connected = false;
   private readonly handlers = new Set<AdapterEventHandler>();
   private readonly known = new Map<string, CursorAgentSnapshot>();
+  /** Dismissed until the transcript gets new activity (updatedAt / status change). */
+  private readonly dismissed = new Map<string, number>();
   private unlisten: UnlistenFn | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -38,20 +40,31 @@ export class CursorAdapter implements AgentAdapter {
     this.connected = true;
 
     try {
+      const saved = await invoke<string[]>("get_dismissed_agents");
+      for (const taskId of saved) {
+        this.dismissed.set(taskId, Date.now());
+      }
+    } catch {
+      // Optional persistence — ignore if command unavailable.
+    }
+
+    try {
       this.unlisten = await listen<CursorAgentSnapshot[]>("cursor-agents", (event) => {
         this.applySnapshots(event.payload);
       });
-    } catch {
-      // Fall back to polling if event listen is unavailable.
+    } catch (error) {
+      console.warn("[cursor] event listen unavailable; polling only", error);
     }
 
-    await this.refresh();
+    await this.refresh().catch((error: unknown) => {
+      console.warn("[cursor] initial scan failed", error);
+    });
 
     this.pollTimer = setInterval(() => {
-      void this.refresh().catch(() => {
-        // Ignore transient scan errors while polling.
+      void this.refresh().catch((error: unknown) => {
+        console.warn("[cursor] poll scan failed", error);
       });
-    }, 2000);
+    }, 800);
   }
 
   async disconnect(): Promise<void> {
@@ -96,16 +109,12 @@ export class CursorAdapter implements AgentAdapter {
   }
 
   async openConversation(taskId: string): Promise<void> {
-    if (!this.known.has(taskId)) {
-      await this.refresh();
-    }
+    await invoke("focus_app", { app: "Cursor" });
+    await this.acknowledgeTask(taskId);
+  }
 
-    const snapshot = this.known.get(taskId);
-    await invoke("open_in_app", {
-      app: "Cursor",
-      path: snapshot?.projectPath ?? null,
-    });
-
+  async acknowledgeTask(taskId: string): Promise<void> {
+    this.markDismissed(taskId);
     this.emit(
       createDomainEvent("conversation.opened", {
         taskId,
@@ -131,12 +140,34 @@ export class CursorAdapter implements AgentAdapter {
     this.applySnapshots(agents);
   }
 
+  private markDismissed(taskId: string) {
+    const snapshot = this.known.get(taskId);
+    this.dismissed.set(taskId, snapshot?.updatedAt ?? Date.now());
+    void invoke("save_dismissed_agents", {
+      taskIds: [...this.dismissed.keys()],
+    }).catch(() => {
+      // Persistence is best-effort.
+    });
+  }
+
   private applySnapshots(agents: CursorAgentSnapshot[]): void {
     const nextIds = new Set(agents.map((agent) => agent.taskId));
 
     for (const agent of agents) {
       const previous = this.known.get(agent.taskId);
       this.known.set(agent.taskId, agent);
+
+      const dismissStamp = this.dismissed.get(agent.taskId);
+      if (dismissStamp !== undefined) {
+        // Only revive on newer transcript activity — not merely still running/waiting.
+        if (agent.updatedAt <= dismissStamp) {
+          continue;
+        }
+        this.dismissed.delete(agent.taskId);
+        void invoke("save_dismissed_agents", {
+          taskIds: [...this.dismissed.keys()],
+        }).catch(() => undefined);
+      }
 
       if (!previous) {
         this.emit(
@@ -180,43 +211,50 @@ export class CursorAdapter implements AgentAdapter {
   }
 
   private emitStatus(agent: CursorAgentSnapshot): void {
+    const at = { timestamp: agent.updatedAt };
     if (agent.status === "waiting") {
       this.emit(
-        createDomainEvent("task.waiting", {
-          taskId: agent.taskId,
-          source: "cursor",
-          reason: agent.activity ?? "Waiting for input",
-          title: agent.title,
-        }),
+        createDomainEvent(
+          "task.waiting",
+          {
+            taskId: agent.taskId,
+            source: "cursor",
+            reason: agent.activity ?? "Waiting…",
+            title: agent.title,
+          },
+          at,
+        ),
       );
       return;
     }
 
     if (agent.status === "completed") {
       this.emit(
-        createDomainEvent("task.updated", {
-          taskId: agent.taskId,
-          source: "cursor",
-          activity: agent.activity ?? "Done",
-          title: agent.title,
-        }),
-      );
-      this.emit(
-        createDomainEvent("task.completed", {
-          taskId: agent.taskId,
-          source: "cursor",
-        }),
+        createDomainEvent(
+          "task.completed",
+          {
+            taskId: agent.taskId,
+            source: "cursor",
+            activity: agent.activity ?? undefined,
+            title: agent.title,
+          },
+          at,
+        ),
       );
       return;
     }
 
     this.emit(
-      createDomainEvent("task.updated", {
-        taskId: agent.taskId,
-        source: "cursor",
-        activity: agent.activity ?? `Active in ${agent.projectName}`,
-        title: agent.title,
-      }),
+      createDomainEvent(
+        "task.updated",
+        {
+          taskId: agent.taskId,
+          source: "cursor",
+          activity: agent.activity ?? "Working…",
+          title: agent.title,
+        },
+        at,
+      ),
     );
   }
 

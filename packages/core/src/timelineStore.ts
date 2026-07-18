@@ -73,18 +73,13 @@ export function reduceTimeline(state: TimelineState, event: DomainEvent): Timeli
       if (!existing) {
         break;
       }
-      const nextStatus =
-        existing.status === "completed" ||
-        existing.status === "failed" ||
-        existing.status === "cancelled"
-          ? existing.status
-          : "running";
+      // Fresh activity always means the agent is running again (revive from completed).
       tasks = upsertTask(tasks, {
         ...existing,
-        status: nextStatus,
+        status: "running",
         title: event.title ?? existing.title,
         activity: event.activity,
-        waitingReason: nextStatus === "running" ? null : existing.waitingReason,
+        waitingReason: null,
         updatedAt: event.timestamp,
         dismissed: false,
       });
@@ -92,13 +87,15 @@ export function reduceTimeline(state: TimelineState, event: DomainEvent): Timeli
     }
     case "task.waiting": {
       const existing = tasks.get(event.taskId);
-      if (existing && (existing.status === "running" || existing.status === "waiting")) {
+      if (existing) {
         tasks = upsertTask(tasks, {
           ...existing,
           status: "waiting",
           title: event.title ?? existing.title,
           waitingReason: event.reason,
+          activity: event.reason,
           updatedAt: event.timestamp,
+          dismissed: false,
         });
       }
       break;
@@ -109,6 +106,8 @@ export function reduceTimeline(state: TimelineState, event: DomainEvent): Timeli
         tasks = upsertTask(tasks, {
           ...existing,
           status: "completed",
+          title: event.title ?? existing.title,
+          activity: event.activity ?? existing.activity,
           waitingReason: null,
           error: null,
           updatedAt: event.timestamp,
@@ -146,12 +145,8 @@ export function reduceTimeline(state: TimelineState, event: DomainEvent): Timeli
     }
     case "conversation.opened": {
       const existing = tasks.get(event.taskId);
-      if (
-        existing &&
-        (existing.status === "completed" ||
-          existing.status === "failed" ||
-          existing.status === "cancelled")
-      ) {
+      // Viewing an agent chat dismisses it from the HUD until new activity arrives.
+      if (existing) {
         tasks = upsertTask(tasks, {
           ...existing,
           dismissed: true,

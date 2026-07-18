@@ -60,7 +60,11 @@ export class IdeLauncherAdapter implements AgentAdapter {
   }
 
   async openConversation(): Promise<void> {
-    await invoke("open_in_app", { app: this.appName, path: null });
+    await invoke("focus_app", { app: this.appName });
+  }
+
+  async acknowledgeTask(): Promise<void> {
+    // Launcher-only adapters have nothing to acknowledge yet.
   }
 
   async getRunningTasks(): Promise<readonly RunningTaskSnapshot[]> {

@@ -45,6 +45,7 @@ export class AdapterManager {
   }
 
   dispose(): void {
+    void this.disconnectAll();
     for (const unsubscribe of this.unsubscribers.values()) {
       unsubscribe();
     }

@@ -20,7 +20,7 @@ export type SettingsListener = (settings: AppSettings) => void;
 export type SettingsUnsubscribe = () => void;
 
 /**
- * In-memory settings store. Persistence via SQLite lands with IPC wiring.
+ * In-memory settings store with optional SQLite persistence via the desktop shell.
  */
 export class SettingsStore {
   private settings: AppSettings;

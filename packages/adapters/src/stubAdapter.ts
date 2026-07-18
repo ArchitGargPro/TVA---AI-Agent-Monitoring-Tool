@@ -59,6 +59,10 @@ export abstract class StubAdapter implements AgentAdapter {
     this.unsupported("openConversation");
   }
 
+  async acknowledgeTask(): Promise<void> {
+    // No-op until live hooks exist.
+  }
+
   async getRunningTasks(): Promise<readonly RunningTaskSnapshot[]> {
     return [];
   }

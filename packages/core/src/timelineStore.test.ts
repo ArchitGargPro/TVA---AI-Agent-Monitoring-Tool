@@ -60,6 +60,46 @@ describe("reduceTimeline", () => {
     expect(task?.waitingReason).toBeNull();
   });
 
+  it("revives completed tasks when new activity arrives", () => {
+    let state = reduceTimeline(
+      createEmptyTimelineState(),
+      createDomainEvent("task.started", {
+        taskId: "t1",
+        source: "cursor",
+        title: "Feature",
+      }),
+    );
+    state = reduceTimeline(
+      state,
+      createDomainEvent("task.completed", {
+        taskId: "t1",
+        source: "cursor",
+      }),
+    );
+    state = reduceTimeline(
+      state,
+      createDomainEvent("conversation.opened", {
+        taskId: "t1",
+        source: "cursor",
+      }),
+    );
+    expect(selectVisibleTasks(state)).toHaveLength(0);
+
+    state = reduceTimeline(
+      state,
+      createDomainEvent("task.waiting", {
+        taskId: "t1",
+        source: "cursor",
+        reason: "Need input",
+        title: "Follow-up",
+      }),
+    );
+
+    expect(selectVisibleTasks(state)).toHaveLength(1);
+    expect(selectVisibleTasks(state)[0]?.status).toBe("waiting");
+    expect(selectVisibleTasks(state)[0]?.dismissed).toBe(false);
+  });
+
   it("keeps completed tasks visible until conversation.opened", () => {
     let state = reduceTimeline(
       createEmptyTimelineState(),

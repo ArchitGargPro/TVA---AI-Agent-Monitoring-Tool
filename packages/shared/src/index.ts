@@ -1,5 +1,5 @@
 /** Application display name. */
-export const APP_NAME = "Mission Control" as const;
+export const APP_NAME = "MinuteControl" as const;
 
 /** Current foundation schema version written to SQLite on first launch. */
 export const SCHEMA_VERSION = 1 as const;

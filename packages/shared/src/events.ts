@@ -36,6 +36,9 @@ export interface TaskUpdatedEvent extends DomainEventBase {
 
 export interface TaskCompletedEvent extends DomainEventBase {
   readonly type: "task.completed";
+  /** Optional reply preview when the turn finishes. */
+  readonly activity?: string;
+  readonly title?: string;
 }
 
 export interface TaskFailedEvent extends DomainEventBase {

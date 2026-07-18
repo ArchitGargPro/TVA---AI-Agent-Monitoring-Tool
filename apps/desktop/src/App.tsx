@@ -1,75 +1,44 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { createMissionControlEngine } from "./engine/createMissionControlEngine";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import {
+  getMissionControlEngine,
+  type MissionControlEngine,
+} from "./engine/createMissionControlEngine";
 import { MissionControlContext } from "./engine/MissionControlContext";
-import { FloatingWidget } from "./components/FloatingWidget";
-import { TimelinePanel } from "./components/TimelinePanel";
-import { useSettings } from "./hooks/useSettings";
+import { HubPanel } from "./components/HubPanel";
+import { FloatingShell } from "./components/FloatingShell";
 
-function applyTheme(theme: "system" | "light" | "dark") {
-  const root = document.documentElement;
-  if (theme === "system") {
-    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    root.setAttribute("data-theme", dark ? "dark" : "light");
-    return;
-  }
-  root.setAttribute("data-theme", theme);
-}
+type WindowMode = "main" | "fidget";
 
-function Shell() {
-  const [expanded, setExpanded] = useState(true);
-  const { settings } = useSettings();
-
-  useEffect(() => {
-    applyTheme(settings.theme);
-    if (settings.theme !== "system") {
-      return;
-    }
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => applyTheme("system");
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, [settings.theme]);
-
+function FidgetApp() {
+  const [engine] = useState<MissionControlEngine>(() => getMissionControlEngine());
   return (
-    <div className="flex h-full flex-col gap-2 overflow-hidden p-3">
-      <FloatingWidget
-        expanded={expanded}
-        onToggle={() => {
-          setExpanded((value) => !value);
-        }}
-      />
-
-      <AnimatePresence initial={false}>
-        {expanded ? (
-          <motion.div
-            key="panel"
-            initial={settings.reduceMotion ? false : { opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={settings.reduceMotion ? undefined : { opacity: 0, y: 6 }}
-            transition={{ duration: 0.16, ease: "easeOut" }}
-            className="min-h-0 flex-1 overflow-y-auto"
-          >
-            <TimelinePanel />
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </div>
+    <MissionControlContext.Provider value={engine}>
+      <FloatingShell />
+    </MissionControlContext.Provider>
   );
 }
 
 export default function App() {
-  const [engine] = useState(() => createMissionControlEngine());
+  const [mode, setMode] = useState<WindowMode | null>(null);
 
   useEffect(() => {
-    return () => {
-      engine.dispose();
-    };
-  }, [engine]);
+    const label = getCurrentWindow().label;
+    setMode(label === "fidget" ? "fidget" : "main");
+    document.documentElement.dataset.window = label === "fidget" ? "fidget" : "main";
+  }, []);
 
-  return (
-    <MissionControlContext.Provider value={engine}>
-      <Shell />
-    </MissionControlContext.Provider>
-  );
+  if (!mode) {
+    return (
+      <div className="flex h-full items-center justify-center font-sans text-xs text-[#8b7355]">
+        Starting…
+      </div>
+    );
+  }
+
+  if (mode === "main") {
+    return <HubPanel />;
+  }
+
+  return <FidgetApp />;
 }

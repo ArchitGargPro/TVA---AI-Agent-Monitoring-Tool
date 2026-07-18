@@ -15,6 +15,7 @@ import {
   GeminiAdapter,
   WindsurfAdapter,
 } from "@mission-control/adapters";
+import { loadPersistedSettings, persistSettings } from "./settingsPersistence";
 
 export interface MissionControlEngine {
   readonly bus: EventBus;
@@ -24,6 +25,27 @@ export interface MissionControlEngine {
   readonly adapters: AdapterManager;
   readonly demo: DemoAdapter;
   dispose: () => void;
+}
+
+/**
+ * Process-lifetime singleton. React StrictMode remounts must not dispose the
+ * live Cursor watchers / event subscriptions mid-session.
+ */
+let sharedEngine: MissionControlEngine | null = null;
+
+export function getMissionControlEngine(): MissionControlEngine {
+  if (!sharedEngine) {
+    sharedEngine = createMissionControlEngine();
+  }
+  return sharedEngine;
+}
+
+/** @internal test helper */
+export function resetMissionControlEngineForTests(): void {
+  if (sharedEngine) {
+    sharedEngine.dispose();
+    sharedEngine = null;
+  }
 }
 
 export function createMissionControlEngine(): MissionControlEngine {
@@ -44,6 +66,26 @@ export function createMissionControlEngine(): MissionControlEngine {
   adapters.register(new GeminiAdapter());
   adapters.register(demo);
 
+  let persistEnabled = false;
+  settings.subscribe((next) => {
+    if (!persistEnabled) {
+      return;
+    }
+    void persistSettings(next);
+  });
+
+  void loadPersistedSettings()
+    .then((saved) => {
+      settings.update(saved);
+      persistEnabled = true;
+    })
+    .catch((error: unknown) => {
+      persistEnabled = true;
+      logger.warning("Failed to load settings", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+
   void adapters
     .connectAll()
     .then(() => {
@@ -57,7 +99,7 @@ export function createMissionControlEngine(): MissionControlEngine {
       });
     });
 
-  return {
+  const engine: MissionControlEngine = {
     bus,
     timeline,
     notifications,
@@ -69,6 +111,11 @@ export function createMissionControlEngine(): MissionControlEngine {
       notifications.dispose();
       adapters.dispose();
       bus.reset();
+      if (sharedEngine === engine) {
+        sharedEngine = null;
+      }
     },
   };
+
+  return engine;
 }

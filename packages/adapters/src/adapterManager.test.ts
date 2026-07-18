@@ -31,6 +31,7 @@ function createStubAdapter(id: string): AgentAdapter & { emit: (event: DomainEve
     async queueMessage() {},
     async stopTask() {},
     async openConversation() {},
+    async acknowledgeTask() {},
     async getRunningTasks() {
       return [];
     },

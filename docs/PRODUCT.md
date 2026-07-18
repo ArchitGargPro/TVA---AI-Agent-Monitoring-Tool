@@ -150,16 +150,18 @@ The MVP intentionally avoids workflow automation and enterprise functionality.
 
 # MVP Features
 
-## Floating Widget
+## Floating Widget (Miss Minutes)
 
-A small always-on-top floating clock.
+A small always-on-top floating Miss Minutes mascot (transparent, undecorated overlay) launched from **MinuteControl**.
 
 Responsibilities:
 
-- Show activity state.
-- Display pending updates.
-- Open the timeline.
-- Consume minimal screen space.
+- Orange clock character with arms, legs, and glancing eyes.
+- Glow + badge on agent updates until the user hovers or clicks her (badge resets to 0).
+- On hover, reveal two-line status bubbles (user preview · app · status/reply).
+- Drag to reposition; click a bubble to jump to Cursor.
+- Appear over fullscreen Spaces when possible.
+- Hub CTA: **Launch Miss Minutes** (second launch is a no-op).
 
 ---
 

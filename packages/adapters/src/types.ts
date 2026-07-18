@@ -38,6 +38,8 @@ export interface AgentAdapter {
   queueMessage(taskId: string, message: string): Promise<void>;
   stopTask(taskId: string): Promise<void>;
   openConversation(taskId: string): Promise<void>;
+  /** Mark task as seen in the HUD without focusing the host app. */
+  acknowledgeTask(taskId: string): Promise<void>;
 
   getRunningTasks(): Promise<readonly RunningTaskSnapshot[]>;
 }
