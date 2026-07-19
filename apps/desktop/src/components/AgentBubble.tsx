@@ -35,7 +35,6 @@ function lineTwo(task: TimelineTask): string {
   if (task.status === "failed") {
     return task.error ?? "Failed";
   }
-  // completed — reply preview in small text on line 2
   return task.activity ?? "Done";
 }
 
@@ -69,7 +68,7 @@ export function AgentBubble({ task, index, onFocus }: AgentBubbleProps) {
         {task.title}
       </span>
       <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
-        <span className="shrink-0 font-sans text-[9px] font-semibold tracking-wide text-black/55">
+        <span className="shrink-0 font-sans text-[7.5px] font-semibold tracking-wide text-black/45">
           {appLabel(task.source)}
         </span>
         <span
@@ -80,8 +79,8 @@ export function AgentBubble({ task, index, onFocus }: AgentBubbleProps) {
         <span
           className={`min-w-0 truncate font-sans leading-snug ${
             isWaiting
-              ? "text-[10px] font-medium text-black/80"
-              : "text-[9px] text-black/55"
+              ? "text-[11px] font-medium text-black/80"
+              : "text-[10.5px] text-black/65"
           }`}
           style={isWaiting ? { color: hue.accent } : undefined}
         >

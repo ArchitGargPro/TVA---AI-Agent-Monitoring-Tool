@@ -5,5 +5,9 @@
     <!-- Keep a Dock icon so the app can be relaunched after quit. -->
     <key>LSUIElement</key>
     <false/>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>MinuteControl uses this so Miss Minutes can stay visible over fullscreen apps.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>MinuteControl uses Automation to bring Cursor to the front when you click a bubble.</string>
   </dict>
 </plist>

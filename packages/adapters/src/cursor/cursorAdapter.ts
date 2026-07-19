@@ -18,6 +18,8 @@ export interface CursorAgentSnapshot {
   status: "running" | "waiting" | "completed" | string;
   activity: string | null;
   updatedAt: number;
+  /** Raw filesystem mtime — dismiss/revive uses this, not content-hash updatedAt. */
+  mtimeMs: number;
 }
 
 /**
@@ -41,8 +43,11 @@ export class CursorAdapter implements AgentAdapter {
 
     try {
       const saved = await invoke<string[]>("get_dismissed_agents");
+      // Stamp far enough ahead of current transcript mtimes so a webview Reload
+      // does not revive already-cleared bubbles until new activity lands.
+      const stamp = Date.now();
       for (const taskId of saved) {
-        this.dismissed.set(taskId, Date.now());
+        this.dismissed.set(taskId, stamp);
       }
     } catch {
       // Optional persistence — ignore if command unavailable.
@@ -109,7 +114,12 @@ export class CursorAdapter implements AgentAdapter {
   }
 
   async openConversation(taskId: string): Promise<void> {
-    await invoke("focus_app", { app: "Cursor" });
+    try {
+      await invoke("focus_app", { app: "Cursor" });
+    } catch (error) {
+      console.warn("[cursor] focus failed", error);
+    }
+    // Always dismiss the bubble, even if focus fails.
     await this.acknowledgeTask(taskId);
   }
 
@@ -142,7 +152,9 @@ export class CursorAdapter implements AgentAdapter {
 
   private markDismissed(taskId: string) {
     const snapshot = this.known.get(taskId);
-    this.dismissed.set(taskId, snapshot?.updatedAt ?? Date.now());
+    // Stamp with wall clock so status/content-hash churn cannot revive immediately.
+    const stamp = Math.max(Date.now(), (snapshot?.mtimeMs ?? 0) + 1);
+    this.dismissed.set(taskId, stamp);
     void invoke("save_dismissed_agents", {
       taskIds: [...this.dismissed.keys()],
     }).catch(() => {
@@ -155,12 +167,11 @@ export class CursorAdapter implements AgentAdapter {
 
     for (const agent of agents) {
       const previous = this.known.get(agent.taskId);
-      this.known.set(agent.taskId, agent);
 
       const dismissStamp = this.dismissed.get(agent.taskId);
       if (dismissStamp !== undefined) {
-        // Only revive on newer transcript activity — not merely still running/waiting.
-        if (agent.updatedAt <= dismissStamp) {
+        // Revive only when the transcript file itself is newer than dismiss.
+        if (agent.mtimeMs <= dismissStamp) {
           continue;
         }
         this.dismissed.delete(agent.taskId);
@@ -168,6 +179,8 @@ export class CursorAdapter implements AgentAdapter {
           taskIds: [...this.dismissed.keys()],
         }).catch(() => undefined);
       }
+
+      this.known.set(agent.taskId, agent);
 
       if (!previous) {
         this.emit(

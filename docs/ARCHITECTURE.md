@@ -681,11 +681,13 @@ Accepted.
 
 Decision
 
-Use elevated NSWindow level (`CGShieldingWindowLevel - 1`) plus collection behavior (`visibleOnAllWorkspaces`, `FullScreenAuxiliary`, `CanJoinAllSpaces`) so Miss Minutes can appear over fullscreen Spaces. Elevation must run on the main thread only (AppKit); the cursor watch loop re-asserts via `run_on_main_thread`. Keep a Dock icon (Regular activation policy) so **MinuteControl** can be relaunched after quit. The fidget window is a fixed large transparent canvas (~480×360) so agent bubbles are not cropped; drag uses `startDragging` after a move threshold. Launching Miss Minutes twice is a no-op.
+Convert the Miss Minutes fidget window to an `NSPanel` (`tauri-nspanel`) with nonactivating style, `FullScreenAuxiliary` + `CanJoinAllSpaces`, then elevate with `CGShieldingWindowLevel` (else above main menu) and `orderFrontRegardless`. Elevation must run on the main thread only (AppKit); the cursor watch loop re-asserts via `run_on_main_thread`. Keep a Dock icon (Regular activation policy) so **MinuteControl** can be relaunched after quit. The fidget window is a fixed large transparent canvas (~480×420) so agent bubbles are not cropped; drag uses `startDragging` after a move threshold. Right-click Miss Minutes for **Clear all bubbles**. Launching Miss Minutes twice is a no-op.
+
+Agent status for glow: `running` when the user spoke last or the assistant is still working; `waiting` only when the assistant paused and is asking for user input; `completed` when the turn ended without an input ask.
 
 Reason
 
-Fullscreen overlays need panel-like window levels. Hiding the Dock icon (Accessory / LSUIElement) made relaunch confusing for MVP users.
+Only `NSPanel` reliably draws over other apps’ fullscreen Spaces on modern macOS. A plain elevated `NSWindow` is not enough. Hiding the Dock icon (Accessory / LSUIElement) made relaunch confusing for MVP users.
 
 Status
 

@@ -1,6 +1,8 @@
 mod cursor_scan;
 #[cfg(target_os = "macos")]
 mod overlay;
+#[cfg(target_os = "macos")]
+mod permissions;
 
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
@@ -9,6 +11,8 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
+#[cfg(target_os = "macos")]
+use tauri_nspanel::ManagerExt as PanelManagerExt;
 
 const APP_NAME: &str = "MinuteControl";
 const SCHEMA_VERSION: i64 = 1;
@@ -244,6 +248,81 @@ fn save_dismissed_agents(
     Ok(task_ids)
 }
 
+#[tauri::command]
+fn reset_local_data(state: State<'_, DbState>) -> Result<(), AppError> {
+    let connection = state
+        .connection
+        .lock()
+        .map_err(|_| AppError::Message("Database lock poisoned".into()))?;
+    let _ = connection.execute(
+        "DELETE FROM app_meta WHERE key = ?1 OR key = ?2",
+        [DISMISSED_KEY, SETTINGS_KEY],
+    );
+    write_dismissed_agents(&connection, &[])?;
+    write_settings_json(&connection, &PersistedSettings::default())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn get_permission_status() -> Result<PermissionStatusDto, AppError> {
+    #[cfg(target_os = "macos")]
+    {
+        let status = permissions::get_permission_status();
+        return Ok(PermissionStatusDto {
+            accessibility: status.accessibility,
+            screen_recording: status.screen_recording,
+        });
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Ok(PermissionStatusDto {
+            accessibility: true,
+            screen_recording: true,
+        })
+    }
+}
+
+#[tauri::command]
+fn open_permission_settings(kind: String) -> Result<(), AppError> {
+    #[cfg(target_os = "macos")]
+    {
+        permissions::open_permission_settings(&kind).map_err(AppError::Message)?;
+        return Ok(());
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = kind;
+        Err(AppError::Message("Permission settings are only available on macOS".into()))
+    }
+}
+
+#[tauri::command]
+fn confirm_screen_recording() -> Result<PermissionStatusDto, AppError> {
+    #[cfg(target_os = "macos")]
+    {
+        permissions::confirm_screen_recording();
+        let status = permissions::get_permission_status();
+        return Ok(PermissionStatusDto {
+            accessibility: status.accessibility,
+            screen_recording: status.screen_recording,
+        });
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Ok(PermissionStatusDto {
+            accessibility: true,
+            screen_recording: true,
+        })
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PermissionStatusDto {
+    accessibility: bool,
+    screen_recording: bool,
+}
+
 /// Activate Cursor, unminimize its windows if possible.
 /// Specific agent-tab routing is not available without a Cursor public API.
 #[tauri::command]
@@ -331,7 +410,7 @@ fn position_fidget(app: &AppHandle) {
     let screen = monitor.size();
     let scale = monitor.scale_factor();
     let width = (480.0 * scale) as u32;
-    let height = (360.0 * scale) as u32;
+    let height = (420.0 * scale) as u32;
     let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width, height }));
     let margin = (24.0 * scale) as u32;
     let x = screen.width.saturating_sub(width + margin) as i32;
@@ -355,11 +434,26 @@ fn show_fidget_window(app: AppHandle) -> Result<bool, AppError> {
     position_fidget(&app);
     let _ = window.set_always_on_top(true);
     let _ = window.set_visible_on_all_workspaces(true);
-    window
-        .show()
-        .map_err(|error| AppError::Message(format!("Failed to show Miss Minutes: {error}")))?;
     #[cfg(target_os = "macos")]
-    overlay::elevate_for_fullscreen(&window);
+    permissions::request_screen_recording_if_needed();
+
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(panel) = app.get_webview_panel("fidget") {
+            panel.show();
+        } else {
+            window
+                .show()
+                .map_err(|error| AppError::Message(format!("Failed to show Miss Minutes: {error}")))?;
+        }
+        overlay::elevate_for_fullscreen(&window);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        window
+            .show()
+            .map_err(|error| AppError::Message(format!("Failed to show Miss Minutes: {error}")))?;
+    }
     Ok(true)
 }
 
@@ -367,6 +461,7 @@ fn show_fidget_window(app: AppHandle) -> Result<bool, AppError> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_nspanel::init())
         .setup(|app| {
             #[cfg(target_os = "macos")]
             {
@@ -382,6 +477,11 @@ pub fn run() {
             start_cursor_watch(app.handle().clone());
             position_fidget(app.handle());
 
+            #[cfg(target_os = "macos")]
+            if let Some(window) = app.get_webview_window("fidget") {
+                overlay::convert_fidget_to_panel(&window);
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -392,6 +492,10 @@ pub fn run() {
             save_settings,
             get_dismissed_agents,
             save_dismissed_agents,
+            reset_local_data,
+            get_permission_status,
+            open_permission_settings,
+            confirm_screen_recording,
             show_fidget_window
         ])
         .run(tauri::generate_context!())

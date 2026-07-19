@@ -34,7 +34,7 @@ Ship a polished Miss Minutes overlay with status bubbles and reliable Cursor ref
 
 # Current Task
 
-QA installed `/Applications/MinuteControl.app` (static Hi graphic + Launch Miss Minutes).
+QA reinstalled `/Applications/MinuteControl.app`: orange wavy while agents work; red/yellow only when waiting for input; Screen Recording status; fullscreen via NSPanel.
 
 ---
 
@@ -198,6 +198,81 @@ For deeper Claude/Codex hooks later:
 # Session Notes
 
 Newest entries first.
+
+---
+
+## 2026-07-18 (Glow mapping + Screen Recording truth + NSPanel)
+
+Summary
+
+- Root cause of red/yellow during in-progress: `last_role == user` was mapped to `waiting`. Now user-last = `running` (orange slow wave). `waiting` is only when the assistant paused and is clearly asking for input.
+- Screen Recording status: window-list probe (other apps’ window titles visible ⇒ granted) + hub **I've enabled it** confirm for TCC edge cases.
+- Fullscreen: convert fidget to `NSPanel` via `tauri-nspanel` (`FullScreenAuxiliary` + `CanJoinAllSpaces` + nonactivating), then elevate.
+
+Next Task
+
+Launch Miss Minutes from `/Applications/MinuteControl.app`, confirm orange wavy while an agent is working, red/yellow only when she asks you something, and visibility over a true fullscreen app.
+
+---
+
+## 2026-07-18 (Glow modes + perms cache + overlay)
+
+Summary
+
+- Glow modes: idle = faint static · processing = rotating wave · waiting = red/yellow aggressive pulse.
+- Idle copy: “I'm watching”; hub tagline beside version.
+- Screen Recording: cache grant via `CGRequestScreenCaptureAccess` (Preflight lies on unsigned builds); Info.plist usage strings.
+- Fullscreen overlay: clear opaque chrome, exact shielding level, Transient collection behavior.
+
+Next Task
+
+Launch Miss Minutes, open Screen Recording once from hub if still Off, then QA over a fullscreen app.
+
+---
+
+## 2026-07-18 (Stale bubbles + drag + perms fix)
+
+Summary
+
+- Root cause of “Briefly inform…”: same Cursor session UUID under multiple project folders; scan now dedupes by task id (latest mtime) and filters noise titles.
+- Clear/dismiss uses wall-clock + raw mtime so content-hash churn cannot revive bubbles.
+- Miss Minutes anchored to top of overlay window so she can be dragged to the top of the screen.
+- Accessibility status uses System Events probe (AXIsProcessTrusted alone was wrong for unsigned builds).
+- Stronger always-on glow + update pulse.
+
+Next Task
+
+Reinstall; Clear All once; grant Screen Recording to `/Applications/MinuteControl.app` specifically for fullscreen.
+
+---
+
+## 2026-07-18 (Permissions + glow + context menu)
+
+Summary
+
+- Right-click: **Reload** + **Clear All** with icons; no bubble scrollbar (cap 6).
+- Bubble: smaller CURSOR label, larger reply preview; faint always-on glow + strong update glow.
+- Hub `?` shows Accessibility / Screen Recording status + deep-links to System Settings.
+- `reset_local_data` + wiped local SQLite for clean QA.
+
+Next Task
+
+Grant Screen Recording + Accessibility if prompted; QA Miss Minutes over fullscreen.
+
+---
+
+## 2026-07-18 (Fullscreen + glance + clear-all)
+
+Summary
+
+- Fullscreen HUD: main-thread elevate, `orderFrontRegardless`, drop Stationary behavior.
+- Eyes glance L/R again; slightly more float; shorter tick marks.
+- Bubble click always removes item; right-click → **Clear all bubbles** (no native Reload menu).
+- Dismissed agents stay hidden across webview reload until new activity.
+
+Next Task
+
+Install and QA over a true fullscreen app.
 
 ---
 
