@@ -4,7 +4,7 @@ Version: 0.1.0
 
 Status: Active Development
 
-Last Updated: 2026-07-18
+Last Updated: 2026-07-23
 
 ---
 
@@ -34,7 +34,7 @@ Ship a polished Miss Minutes overlay with status bubbles and reliable Cursor ref
 
 # Current Task
 
-QA reinstalled `/Applications/MinuteControl.app`: orange wavy while agents work; red/yellow only when waiting for input; Screen Recording status; fullscreen via NSPanel.
+Push polished MVP to GitHub; QA shared DMG install path.
 
 ---
 
@@ -198,6 +198,32 @@ For deeper Claude/Codex hooks later:
 # Session Notes
 
 Newest entries first.
+
+---
+
+## 2026-07-19 (Face-only hover / click-through)
+
+Summary
+
+- Hover/expand only on Miss Minutes’ face hit circle (not the full 480×420 window).
+- Empty overlay chrome uses `setIgnoreCursorEvents` hit-testing so clicks pass through to apps below; bubbles + context menu remain interactive.
+
+Next Task
+
+Reinstall and QA: cursor passes through around Miss Minutes; hover/drag/context menu still work on her face.
+
+---
+
+## 2026-07-19 (Reload = active agents only)
+
+Summary
+
+- Miss Minutes bubbles show **active** tasks only (running + waiting), not completed leftovers.
+- Context-menu **Reload** hard-refreshes Cursor scan: force-emits latest status, undismisses still-active agents, dismisses completed from the HUD, and expands bubbles.
+
+Next Task
+
+Right-click Miss Minutes → Reload; confirm only in-progress agents appear with fresh activity text.
 
 ---
 

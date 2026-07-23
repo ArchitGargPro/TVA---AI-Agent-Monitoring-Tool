@@ -5,6 +5,7 @@ import {
   TimelineStore,
   createEmptyTimelineState,
   reduceTimeline,
+  selectActiveTasks,
   selectRunningTasks,
   selectVisibleTasks,
   selectWaitingTasks,
@@ -160,6 +161,17 @@ describe("reduceTimeline", () => {
 
     expect(selectRunningTasks(state).map((t) => t.taskId)).toEqual(["run"]);
     expect(selectWaitingTasks(state).map((t) => t.taskId)).toEqual(["wait"]);
+    expect(selectActiveTasks(state).map((t) => t.taskId)).toEqual(["wait", "run"]);
+
+    state = reduceTimeline(
+      state,
+      createDomainEvent("conversation.opened", {
+        taskId: "run",
+        source: "cursor",
+      }),
+    );
+    expect(selectRunningTasks(state)).toHaveLength(0);
+    expect(selectActiveTasks(state).map((t) => t.taskId)).toEqual(["wait"]);
   });
 });
 

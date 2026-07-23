@@ -9,6 +9,7 @@ export {
   selectRunningTasks,
   selectVisibleTasks,
   selectWaitingTasks,
+  selectActiveTasks,
 } from "./timelineStore";
 export type { TaskStatus, TimelineListener, TimelineState, TimelineTask } from "./timelineStore";
 

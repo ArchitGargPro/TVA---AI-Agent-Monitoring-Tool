@@ -181,12 +181,25 @@ export function selectVisibleTasks(state: TimelineState): readonly TimelineTask[
   return listTasks(state).filter((task) => !task.dismissed);
 }
 
+/** In-progress tasks on the HUD (running, not dismissed). */
 export function selectRunningTasks(state: TimelineState): readonly TimelineTask[] {
-  return listTasks(state).filter((task) => task.status === "running");
+  return listTasks(state).filter(
+    (task) => task.status === "running" && !task.dismissed,
+  );
 }
 
+/** Waiting-for-input tasks on the HUD (not dismissed). */
 export function selectWaitingTasks(state: TimelineState): readonly TimelineTask[] {
-  return listTasks(state).filter((task) => task.status === "waiting");
+  return listTasks(state).filter(
+    (task) => task.status === "waiting" && !task.dismissed,
+  );
+}
+
+/** Active HUD bubbles: waiting first, then running. */
+export function selectActiveTasks(state: TimelineState): readonly TimelineTask[] {
+  return [...selectWaitingTasks(state), ...selectRunningTasks(state)].sort(
+    (a, b) => b.updatedAt - a.updatedAt,
+  );
 }
 
 export type TimelineListener = (state: TimelineState) => void;
@@ -225,6 +238,10 @@ export class TimelineStore {
 
   getWaitingTasks(): readonly TimelineTask[] {
     return selectWaitingTasks(this.state);
+  }
+
+  getActiveTasks(): readonly TimelineTask[] {
+    return selectActiveTasks(this.state);
   }
 
   getEvents(): readonly DomainEvent[] {

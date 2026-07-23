@@ -145,9 +145,38 @@ export class CursorAdapter implements AgentAdapter {
       }));
   }
 
-  async refresh(): Promise<void> {
+  async refresh(options?: { hard?: boolean }): Promise<void> {
     const agents = await invoke<CursorAgentSnapshot[]>("scan_cursor_agents");
-    this.applySnapshots(agents);
+    const hard = options?.hard === true;
+
+    if (hard) {
+      // Reload = truth from disk: bring back every still-active agent.
+      for (const agent of agents) {
+        if (agent.status === "running" || agent.status === "waiting") {
+          this.dismissed.delete(agent.taskId);
+        }
+      }
+      void invoke("save_dismissed_agents", {
+        taskIds: [...this.dismissed.keys()],
+      }).catch(() => undefined);
+    }
+
+    this.applySnapshots(agents, { force: hard });
+
+    if (hard) {
+      // After a hard reload, hide completed/idle agents from the HUD.
+      for (const agent of agents) {
+        if (agent.status !== "running" && agent.status !== "waiting") {
+          this.markDismissed(agent.taskId);
+          this.emit(
+            createDomainEvent("conversation.opened", {
+              taskId: agent.taskId,
+              source: "cursor",
+            }),
+          );
+        }
+      }
+    }
   }
 
   private markDismissed(taskId: string) {
@@ -162,7 +191,11 @@ export class CursorAdapter implements AgentAdapter {
     });
   }
 
-  private applySnapshots(agents: CursorAgentSnapshot[]): void {
+  private applySnapshots(
+    agents: CursorAgentSnapshot[],
+    options?: { force?: boolean },
+  ): void {
+    const force = options?.force === true;
     const nextIds = new Set(agents.map((agent) => agent.taskId));
 
     for (const agent of agents) {
@@ -199,6 +232,7 @@ export class CursorAdapter implements AgentAdapter {
       }
 
       if (
+        force ||
         agent.status !== previous.status ||
         agent.activity !== previous.activity ||
         agent.title !== previous.title ||

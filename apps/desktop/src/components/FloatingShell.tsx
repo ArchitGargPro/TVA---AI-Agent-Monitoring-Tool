@@ -7,13 +7,21 @@ import {
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Eraser, RefreshCw } from "lucide-react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { cursorPosition, getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { useMissionControl } from "../engine/MissionControlContext";
 import { MissMinutes } from "./MissMinutes";
 import { AgentBubble } from "./AgentBubble";
 import { useTimelineTasks } from "../hooks/useTimelineTasks";
 import type { CursorAdapter } from "@mission-control/adapters";
+
+function pointInElement(el: HTMLElement | null, x: number, y: number): boolean {
+  if (!el) {
+    return false;
+  }
+  const rect = el.getBoundingClientRect();
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
 
 function resolveAdapterId(taskId: string): string {
   if (taskId.startsWith("cursor:")) {
@@ -52,20 +60,28 @@ const MAX_BUBBLES = 6;
 
 export function FloatingShell() {
   const [expanded, setExpanded] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
   const [glowing, setGlowing] = useState(false);
   const [badgeCount, setBadgeCount] = useState(0);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const didDrag = useRef(false);
+  const pointerHeld = useRef(false);
   const lastFingerprint = useRef<string>("");
   const hovering = useRef(false);
+  const faceRef = useRef<HTMLDivElement>(null);
+  const bubblesRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
-  const { visible, waiting, running } = useTimelineTasks();
-  const { adapters } = useMissionControl();
+  const { active, waiting, running } = useTimelineTasks();
+  const { adapters, timeline } = useMissionControl();
   const glowMode =
     waiting.length > 0 ? "waiting" : running.length > 0 ? "processing" : "idle";
-  const shownBubbles = visible.slice(0, MAX_BUBBLES);
+  const shownBubbles = active.slice(0, MAX_BUBBLES);
+  // Agent bubbles when expanded; idle "I'm watching" only while hovering with nothing active.
+  const showBubblePanel =
+    shownBubbles.length > 0 ? expanded : isHovering;
 
   function clearLeaveTimer() {
     if (leaveTimer.current) {
@@ -82,6 +98,7 @@ export function FloatingShell() {
   function expandAndClear() {
     clearLeaveTimer();
     hovering.current = true;
+    setIsHovering(true);
     setExpanded(true);
     markSeen();
   }
@@ -90,11 +107,61 @@ export function FloatingShell() {
     clearLeaveTimer();
     leaveTimer.current = setTimeout(() => {
       hovering.current = false;
+      setIsHovering(false);
       setExpanded(false);
     }, 240);
   }
 
   useEffect(() => () => clearLeaveTimer(), []);
+
+  // Click-through empty overlay chrome; only face / bubbles / menu capture the cursor.
+  useEffect(() => {
+    const win = getCurrentWindow();
+    let cancelled = false;
+    let ignoring: boolean | null = null;
+
+    async function applyIgnore(next: boolean) {
+      if (cancelled || ignoring === next) {
+        return;
+      }
+      ignoring = next;
+      await win.setIgnoreCursorEvents(next).catch(() => undefined);
+    }
+
+    async function tick() {
+      if (cancelled) {
+        return;
+      }
+      if (pointerHeld.current || didDrag.current) {
+        await applyIgnore(false);
+        return;
+      }
+      try {
+        const [cursor, origin, factor] = await Promise.all([
+          cursorPosition(),
+          win.innerPosition(),
+          win.scaleFactor(),
+        ]);
+        const x = (cursor.x - origin.x) / factor;
+        const y = (cursor.y - origin.y) / factor;
+        const overInteractive =
+          pointInElement(faceRef.current, x, y) ||
+          pointInElement(bubblesRef.current, x, y) ||
+          pointInElement(menuRef.current, x, y);
+        await applyIgnore(!overInteractive);
+      } catch {
+        /* window may be hidden during teardown */
+      }
+    }
+
+    void applyIgnore(true);
+    const id = window.setInterval(() => void tick(), 40);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      void win.setIgnoreCursorEvents(false).catch(() => undefined);
+    };
+  }, [expanded, menu]);
 
   useEffect(() => {
     function closeMenu() {
@@ -109,11 +176,11 @@ export function FloatingShell() {
   }, []);
 
   useEffect(() => {
-    const next = tasksFingerprint(visible);
+    const next = tasksFingerprint(active);
     if (!lastFingerprint.current) {
       lastFingerprint.current = next;
-      if (visible.length > 0 && !hovering.current) {
-        setBadgeCount(visible.length);
+      if (active.length > 0 && !hovering.current) {
+        setBadgeCount(active.length);
       }
       return;
     }
@@ -121,10 +188,10 @@ export function FloatingShell() {
       lastFingerprint.current = next;
       if (!hovering.current) {
         setGlowing(true);
-        setBadgeCount(visible.length);
+        setBadgeCount(active.length);
       }
     }
-  }, [visible]);
+  }, [active]);
 
   async function acknowledgeTask(taskId: string) {
     const adapter = adapters.get(resolveAdapterId(taskId)) ?? adapters.get("cursor");
@@ -154,17 +221,18 @@ export function FloatingShell() {
   async function clearAllBubbles() {
     setMenu(null);
     markSeen();
-    const tasks = [...visible];
+    const tasks = [...active];
     await Promise.all(tasks.map((task) => acknowledgeTask(task.taskId)));
     setExpanded(false);
   }
 
   async function reloadAgents() {
     setMenu(null);
+    markSeen();
     const cursor = adapters.get("cursor") as CursorAdapter | undefined;
     if (cursor && typeof cursor.refresh === "function") {
       try {
-        await cursor.refresh();
+        await cursor.refresh({ hard: true });
       } catch (error) {
         console.warn("[minutecontrol] reload failed", error);
       }
@@ -174,6 +242,12 @@ export function FloatingShell() {
       } catch {
         // best-effort
       }
+    }
+    // Expand only when there are in-progress agents — never pin "I'm watching" without hover.
+    if (timeline.getActiveTasks().length > 0) {
+      setExpanded(true);
+    } else {
+      setExpanded(false);
     }
     try {
       await invoke("show_fidget_window");
@@ -194,6 +268,7 @@ export function FloatingShell() {
     }
     setMenu(null);
     markSeen();
+    pointerHeld.current = true;
     pointerStart.current = { x: event.clientX, y: event.clientY };
     didDrag.current = false;
   }
@@ -215,7 +290,9 @@ export function FloatingShell() {
   function onClockPointerUp(event: ReactPointerEvent<HTMLDivElement>) {
     const start = pointerStart.current;
     pointerStart.current = null;
+    pointerHeld.current = false;
     if (!start || didDrag.current) {
+      didDrag.current = false;
       return;
     }
     const moved =
@@ -228,46 +305,52 @@ export function FloatingShell() {
   }
 
   return (
-    <div
-      className="relative flex h-full w-full items-start justify-end gap-2 overflow-visible p-3"
-      onMouseEnter={expandAndClear}
-      onMouseLeave={collapseSoon}
-      onContextMenu={(event) => event.preventDefault()}
-    >
+    <div className="relative flex h-full w-full items-start justify-end overflow-visible p-3">
       <div className="flex flex-col items-end gap-1.5">
-        <div
-          role="button"
-          tabIndex={0}
-          className="shrink-0 cursor-grab active:cursor-grabbing"
-          aria-label={expanded ? "Miss Minutes (expanded)" : "Miss Minutes — drag to move"}
-          aria-expanded={expanded}
-          onPointerDown={onClockPointerDown}
-          onPointerMove={onClockPointerMove}
-          onPointerUp={onClockPointerUp}
-          onPointerCancel={() => {
-            pointerStart.current = null;
-          }}
-          onContextMenu={onClockContextMenu}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              markSeen();
-              setExpanded((value) => !value);
-            }
-          }}
-        >
-          <MissMinutes mode={glowMode} activeCount={badgeCount} glowing={glowing} />
+        <div className="relative h-[120px] w-[112px] shrink-0">
+          <div className="pointer-events-none">
+            <MissMinutes mode={glowMode} activeCount={badgeCount} glowing={glowing} />
+          </div>
+          {/* Face-only hit target — limbs/glow must not block the desktop. */}
+          <div
+            ref={faceRef}
+            role="button"
+            tabIndex={0}
+            className="pointer-events-auto absolute left-1/2 top-[18px] h-[64px] w-[64px] -translate-x-1/2 cursor-grab rounded-full active:cursor-grabbing"
+            aria-label={expanded ? "Miss Minutes (expanded)" : "Miss Minutes — drag to move"}
+            aria-expanded={expanded}
+            onMouseEnter={expandAndClear}
+            onMouseLeave={collapseSoon}
+            onPointerDown={onClockPointerDown}
+            onPointerMove={onClockPointerMove}
+            onPointerUp={onClockPointerUp}
+            onPointerCancel={() => {
+              pointerStart.current = null;
+              pointerHeld.current = false;
+            }}
+            onContextMenu={onClockContextMenu}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                markSeen();
+                setExpanded((value) => !value);
+              }
+            }}
+          />
         </div>
 
         <AnimatePresence>
-          {expanded ? (
+          {showBubblePanel ? (
             <motion.div
               key="bubbles"
-              className="flex w-[230px] flex-col items-end gap-1.5 overflow-hidden"
+              ref={bubblesRef}
+              className="pointer-events-auto flex w-[230px] flex-col items-end gap-1.5 overflow-hidden"
               initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
               transition={{ type: "spring", stiffness: 480, damping: 22 }}
+              onMouseEnter={expandAndClear}
+              onMouseLeave={collapseSoon}
             >
               {shownBubbles.length === 0 ? (
                 <motion.div
@@ -294,13 +377,16 @@ export function FloatingShell() {
 
       {menu ? (
         <div
-          className="absolute z-50 min-w-[148px] overflow-hidden rounded-lg border border-black/10 bg-white/95 py-1 shadow-lg backdrop-blur-sm"
+          ref={menuRef}
+          className="pointer-events-auto absolute z-50 min-w-[148px] overflow-hidden rounded-lg border border-black/10 bg-white/95 py-1 shadow-lg backdrop-blur-sm"
           style={{
             left: Math.min(menu.x, window.innerWidth - 168),
             top: Math.min(menu.y, window.innerHeight - 88),
           }}
           onClick={(event) => event.stopPropagation()}
           onContextMenu={(event) => event.preventDefault()}
+          onMouseEnter={expandAndClear}
+          onMouseLeave={collapseSoon}
         >
           <button
             type="button"

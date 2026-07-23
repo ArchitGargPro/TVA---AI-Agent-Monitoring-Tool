@@ -16,6 +16,8 @@ html[data-window="fidget"],
 html[data-window="fidget"] body,
 html[data-window="fidget"] #root {
   background: transparent !important;
+  /* Pass clicks through empty overlay chrome; interactive children opt back in. */
+  pointer-events: none;
 }
 
 html[data-window="main"] body {
